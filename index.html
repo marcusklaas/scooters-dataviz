@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="height=device-height, initial-yScale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Scooters in getallen</title>
+    <style>
+        .chart text, .chart2 text {
+            font: 10px sans-serif;
+        }
+
+        g.bar > text {
+            display: none;
+        }
+
+        g.bar:hover > text {
+            display: block;
+            text-anchor: middle;
+            fill: #000;
+        }
+
+        .axis text {
+            font: 10px sans-serif;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        #chart1 .x.axis path {
+            display: none;
+        }
+
+        .grid line {
+            stroke: #ddd;
+        }
+
+        .grid .domain {
+            display: none;
+        }
+
+        body {
+            width: 960px;
+            margin: auto;
+        }
+    </style>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="graph1.js"></script>
+    <script src="graph2.js"></script>
+</head>
+<body>
+    <h2>Aantallen scooters in Nederland</h2>
+    <svg id="chart1" class="chart"></svg>
+    <h2>Ontwikkeling emissies naar lucht</h2>
+    <svg id="chart2" class="chart"></svg>
+    <h2>Aantal ongevallen door tijd</h2>
+    <h2>Scooterbezit per postcode</h2>
+</body>
+</html>
