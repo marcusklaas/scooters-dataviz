@@ -11,7 +11,7 @@ const makeGeoPlot = () => {
         .translate([-0.08 * scale, 1.081 * scale]);
     const path = d3.geoPath().projection(projection);
 
-    const chart = d3.select("#chart3")
+    let chart = d3.select("#chart3")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
@@ -34,59 +34,75 @@ const makeGeoPlot = () => {
     const polygonPromise = d3.json('polygon.json').then(data => 
         data.features.filter(d => parseInt(d.properties.PC4CODE) < postcodeUpperLimit));
 
-    Promise.all([dataPromise, polygonPromise]).then(([data, polygons]) => {
-        // TODO: make number of scooters relative to number of inhabibants per postal code
-        let filteredData = new Map(data.filter(d => d.t == "2018")
-            .map(d => [d.regio, d.bromfietskentekens]));
+    let paths = chart.selectAll("path");
+    let currentYear = null;
 
-        // TODO: determine domain limit dynamically
-        const colorScale = d3.scaleLinear().domain([0, 1800])
-            .interpolate(d3.interpolateHcl)
-            .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
+    // FIXME: we should split this into a draw one function and an update function
+    const drawMap = year =>
+        Promise.all([dataPromise, polygonPromise]).then(([data, polygons]) => {
+            // TODO: make number of scooters relative to number of inhabibants per postal code
+            let filteredData = new Map(data.filter(d => d.t == year)
+                .map(d => [d.regio, d.bromfietskentekens]));
 
-        // paths
-        chart.selectAll("path")
-            .data(polygons)
-            .enter()
-                .append("path")
-                .attr("d", path)
+            const colorScale = d3.scaleLinear().domain([0, d3.max(data, d => d.bromfietskentekens)])
+                .interpolate(d3.interpolateHcl)
+                .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
+
+            // paths
+            paths = paths.data(polygons, d => d.properties.PC4CODE);
+            paths.exit().remove();
+            paths = paths
+                .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .on("mouseover", d => {
+                        d3.select("#p" + d.properties.PC4CODE).style("display", "block");
+                    })
+                    .on("mouseout", d => {
+                        d3.select("#p" + d.properties.PC4CODE).style("display", "none");
+                    })
+                    .merge(paths)
+
+            paths.transition()
+                .duration(100)
                 .attr("fill", d => colorScale(filteredData.get(d.properties.PC4CODE)))
-                .on("mouseover", d => {
-                    d3.select("#p" + d.properties.PC4CODE).style("display", "block");
-                })
-                .on("mouseout", d => {
-                    d3.select("#p" + d.properties.PC4CODE).style("display", "none");
-                })
 
-        // labels
-        chart.selectAll("g")
-            .data(polygons)
-            .enter()
-                .append("g")
-                .attr("id", d => `p${d.properties.PC4CODE}`)
-                .attr("class", "postcode-label")
-                .attr("transform", d => `translate(${path.centroid(d)[0]}, ${path.centroid(d)[1] - 5})`)
-                .on("mouseover", function(d) {
-                    d3.select(this).style("display", "block");
-                })
-                .on("mouseout", function(d) {
-                    d3.select(this).style("display", "none");
-                })
-                .append("text")
-                .style("text-anchor", "middle")
-                .text(d => {
-                    const count = filteredData.get(d.properties.PC4CODE);
-                    return `${d.properties.PC4CODE}: ${count}`;
-                });
-    });
+            // TODO: update labels
+
+            // labels
+            chart.selectAll("g")
+                .data(polygons)
+                .enter()
+                    .append("g")
+                    .attr("id", d => `p${d.properties.PC4CODE}`)
+                    .attr("class", "postcode-label")
+                    .attr("transform", d => `translate(${path.centroid(d)[0]}, ${path.centroid(d)[1] - 5})`)
+                    .on("mouseover", function(d) {
+                        d3.select(this).style("display", "block");
+                    })
+                    .on("mouseout", function(d) {
+                        d3.select(this).style("display", "none");
+                    })
+                    .append("text")
+                    .style("text-anchor", "middle")
+                    .text(d => {
+                        const count = filteredData.get(d.properties.PC4CODE);
+                        return `${d.properties.PC4CODE}: ${count}`;
+                    });
+        });
 
     // slider
     dataPromise.then(d => {
-        const L = 10;
+        const years = Array.from(new Set(d.map(d => d.t)).values()).sort();
+        const L = years.length;
+        const dx = L/ (years.length - 1);
+        const xticks = d3.range(0, L + dx, dx);
+
         const xScale = d3.scaleLinear()
-            .domain([0,10])
+            .domain([0, L])
             .range([0, width])
             .clamp(true);
+
         const slider = d3.select("#chart3").append("g")
             .attr("transform", `translate(${margin.left}, ${height + margin.top + 20})`);
 
@@ -104,11 +120,15 @@ const makeGeoPlot = () => {
             .attr("class", "track-overlay")
             .call(d3.drag()
                 .on("start.interrupt", () => slider.interrupt())
-                .on("start drag", () => hue(xScale.invert(d3.event.x))));
+                .on("start drag", () => {
+                    hue(xScale.invert(d3.event.x));
+                    const year = Math.round(xScale.invert(d3.event.x) / dx);
 
-        var years = d3.range(2010,2016,1);
-        var dx = L/ (years.length - 1);
-        var xticks = d3.range(0, L + dx, dx);
+                    if (year !== currentYear) {
+                        currentYear = year;
+                        drawMap(years[currentYear]);
+                    }
+                }))
 
         slider.insert("g", ".track-overlay")
             .attr("class", "ticks")
@@ -118,11 +138,14 @@ const makeGeoPlot = () => {
             .enter().append("text")
             .attr("x", xScale)
             .attr("text-anchor", "middle")
-            .text((d,i) => years[i]);
+            .text((d, i) => years[i]);
 
         var handle = slider.insert("circle", ".track-overlay")
             .attr("class", "handle")
             .attr("r", 9)
             .attr("cx", xScale.range()[0]);
+
+        currentYear = years[0];
+        drawMap(currentYear);
     })
 };
