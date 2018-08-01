@@ -34,7 +34,6 @@
                 .range([0, height])
                 .domain([4.5, 0]);
 
-
             const keyz = Object.keys(consolidatedData[0]).diff(['t', 'soort']);
 
             const zScale = d3.scaleOrdinal()
