@@ -4,8 +4,11 @@ const makeGeoPlot = () => {
         height = 650 - margin.top - margin.bottom,
         scale = 70000,
         postcodeLowerLimit = 1000,
-        postcodeUpperLimit = 1200;
+        postcodeUpperLimit = 1200,
+        legendLower = 0,
+        legendUpper = 2000;
 
+    // TODO: play around with resetting the center
     const projection = d3.geoMercator()
         .scale(scale)
         .translate([-0.08 * scale, 1.081 * scale]);
@@ -34,8 +37,15 @@ const makeGeoPlot = () => {
     const polygonPromise = d3.json('polygon.json').then(data => 
         data.features.filter(d => parseInt(d.properties.PC4CODE) < postcodeUpperLimit));
 
+    
+    const colorScale = d3.scaleLinear().domain([legendLower, legendUpper])
+        .interpolate(d3.interpolateHcl)
+        .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
+
     let paths = chart.selectAll("path");
     let currentYear = null;
+
+    // TODO: add zoom on click
 
     // FIXME: we should split this into a draw one function and an update function
     const drawMap = year =>
@@ -43,10 +53,6 @@ const makeGeoPlot = () => {
             // TODO: make number of scooters relative to number of inhabibants per postal code
             let filteredData = new Map(data.filter(d => d.t == year)
                 .map(d => [d.regio, d.bromfietskentekens]));
-
-            const colorScale = d3.scaleLinear().domain([0, d3.max(data, d => d.bromfietskentekens)])
-                .interpolate(d3.interpolateHcl)
-                .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
 
             // paths
             paths = paths.data(polygons, d => d.properties.PC4CODE);
@@ -144,6 +150,50 @@ const makeGeoPlot = () => {
             .attr("class", "handle")
             .attr("r", 9)
             .attr("cx", xScale.range()[0]);
+
+        // legend
+        const legendWidth = 20;
+        const legendHeight = height * .4;
+        const key = d3.select("#chart3")
+            .append("g")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .attr("transform", `translate(${margin.left + width + 18}, ${margin.top})`);
+        
+        const legend = key.append("defs")
+            .append("svg:linearGradient")
+            .attr("id", "gradient")
+            .attr("x1", "100%")
+            .attr("y1", "0%")
+            .attr("x2", "100%")
+            .attr("y2", "100%")
+            .attr("spreadMethod", "pad");
+
+        // FIXME: we're emulating a complex gradient by a bunch of linear gradients
+        // not ideal - but not clear how to do it properly
+        const gradientSteps = 22;
+        legend.selectAll("stop")
+            .data(d3.range(legendLower, legendUpper, (legendUpper - legendLower) / gradientSteps))
+            .enter()
+                .append("stop")
+                .attr("offset", (d, i) => `${100 * i / gradientSteps}%`)
+                .attr("stop-color", colorScale)
+                .attr("stop-opacity", 1);
+
+        key.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .style("fill", "url(#gradient)");
+
+        const scale = d3.scaleLinear()
+            .domain([legendLower, legendUpper])
+            .range([0, legendHeight]);
+        const axis = d3.axisLeft(scale).ticks(5);
+
+        key.append("g")
+            .attr("height", legendHeight)
+            .attr("class", "y axis")
+            .call(axis);
 
         currentYear = years[0];
         drawMap(currentYear);
