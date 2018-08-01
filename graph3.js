@@ -1,7 +1,7 @@
-{
-    const margin = {top: 20, right: 120, bottom: 30, left: 60},
+const makeGeoPlot = () => {
+    const margin = {top: 20, right: 120, bottom: 60, left: 60},
         width = 960 - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom,
+        height = 650 - margin.top - margin.bottom,
         scale = 70000,
         postcodeLowerLimit = 1000,
         postcodeUpperLimit = 1200;
@@ -11,6 +11,12 @@
         .translate([-0.08 * scale, 1.081 * scale]);
     const path = d3.geoPath().projection(projection);
 
+    const chart = d3.select("#chart3")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
     const dataPromise = d3.csv('Motorvoertuigen__type__postcode__regio_s_20072018_140032.csv', (obj, idx) => {
         return {
             t: obj["Perioden"],
@@ -18,26 +24,20 @@
             bromfietskentekens: parseInt(obj["Wegvoertuigen per 1 januari/Voertuigen met bromfietskenteken/Alle voertuigen met bromfietskenteken (aantal)"])
         };
     }).then(data =>
-        new Map(data.filter(d => d.t == "2018")
-            .filter(d => {
+        data.filter(d => {
                 const parsed = parseInt(d.regio);
 
                 return !isNaN(parsed) && parsed >= postcodeLowerLimit && parsed < postcodeUpperLimit;
             })
-            .map(d => [d.regio, d.bromfietskentekens]))
     );
 
     const polygonPromise = d3.json('polygon.json').then(data => 
         data.features.filter(d => parseInt(d.properties.PC4CODE) < postcodeUpperLimit));
 
     Promise.all([dataPromise, polygonPromise]).then(([data, polygons]) => {
-        const chart = d3.select("#chart3")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-                .attr("transform", `translate(${margin.left}, ${margin.top})`);
-
         // TODO: make number of scooters relative to number of inhabibants per postal code
+        let filteredData = new Map(data.filter(d => d.t == "2018")
+            .map(d => [d.regio, d.bromfietskentekens]));
 
         // TODO: determine domain limit dynamically
         const colorScale = d3.scaleLinear().domain([0, 1800])
@@ -50,7 +50,7 @@
             .enter()
                 .append("path")
                 .attr("d", path)
-                .attr("fill", d => colorScale(data.get(d.properties.PC4CODE)))
+                .attr("fill", d => colorScale(filteredData.get(d.properties.PC4CODE)))
                 .on("mouseover", d => {
                     d3.select("#p" + d.properties.PC4CODE).style("display", "block");
                 })
@@ -75,8 +75,54 @@
                 .append("text")
                 .style("text-anchor", "middle")
                 .text(d => {
-                    const count = data.get(d.properties.PC4CODE);
+                    const count = filteredData.get(d.properties.PC4CODE);
                     return `${d.properties.PC4CODE}: ${count}`;
                 });
     });
-}
+
+    // slider
+    dataPromise.then(d => {
+        const L = 10;
+        const xScale = d3.scaleLinear()
+            .domain([0,10])
+            .range([0, width])
+            .clamp(true);
+        const slider = d3.select("#chart3").append("g")
+            .attr("transform", `translate(${margin.left}, ${height + margin.top + 20})`);
+
+        function hue(h) {
+            handle.attr("cx", xScale(h));
+        }
+
+        slider.append("line")
+            .attr("class", "track")
+            .attr("x1", xScale.range()[0])
+            .attr("x2", xScale.range()[1])
+            .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+            .attr("class", "track-inset")
+            .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
+            .attr("class", "track-overlay")
+            .call(d3.drag()
+                .on("start.interrupt", () => slider.interrupt())
+                .on("start drag", () => hue(xScale.invert(d3.event.x))));
+
+        var years = d3.range(2010,2016,1);
+        var dx = L/ (years.length - 1);
+        var xticks = d3.range(0, L + dx, dx);
+
+        slider.insert("g", ".track-overlay")
+            .attr("class", "ticks")
+            .attr("transform", "translate(0,25)")
+            .selectAll("text")
+            .data(xticks)
+            .enter().append("text")
+            .attr("x", xScale)
+            .attr("text-anchor", "middle")
+            .text((d,i) => years[i]);
+
+        var handle = slider.insert("circle", ".track-overlay")
+            .attr("class", "handle")
+            .attr("r", 9)
+            .attr("cx", xScale.range()[0]);
+    })
+};

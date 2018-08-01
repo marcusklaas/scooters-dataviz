@@ -51,12 +51,55 @@
         .postcode-label {
             display: none;
         }
+
+        .track,
+        .track-inset,
+        .track-overlay {
+            stroke-linecap: round;
+        }
+
+        .track {
+            stroke: #000;
+            stroke-opacity: 0.3;
+            stroke-width: 6px;
+        }
+
+        .track-inset {
+            stroke: #ddd;
+            stroke-width: 4px;
+        }
+
+        .track-overlay {
+            pointer-events: stroke;
+            stroke-width: 50px;
+            cursor: pointer;
+        }
+
+        .handle {
+            fill: #fff;
+            stroke: #000;
+            stroke-opacity: 0.5;
+            stroke-width: 1.25px;
+        }
+
+
+        .ticks {
+            font: 12px sans-serif;
+            fill: black;
+        }
     </style>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-geo-projection/2.4.0/d3-geo-projection.min.js"></script>
     <script src="graph1.js"></script>
     <script src="graph2.js"></script>
     <script src="graph3.js"></script>
+    <script>
+        window.onload = () => {
+            makeScooterCountPlot();
+            makeEmissionsPlot();
+            makeGeoPlot();
+        };
+    </script>
 </head>
 <body>
     <h2>Aantallen scooters in Nederland</h2>

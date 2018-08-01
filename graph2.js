@@ -1,4 +1,4 @@
-{
+const makeEmissionsPlot = () => {
     const margin = {top: 20, right: 120, bottom: 30, left: 60},
         width = 960 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
@@ -104,4 +104,4 @@
                 .attr("text-anchor", "start")
                 .text(d => d);
         });
-}
+};
