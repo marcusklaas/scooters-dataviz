@@ -23,10 +23,10 @@ const makeGeoPlot = () => {
         legendLower = 0,
         legendUpper = 2000;
 
-    // TODO: play around with resetting the center
     const projection = d3.geoMercator()
         .scale(scale)
         .translate([-0.08 * scale, 1.081 * scale]);
+
     const path = d3.geoPath().projection(projection);
 
     let chart = d3.select("#chart3")
@@ -34,6 +34,20 @@ const makeGeoPlot = () => {
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    const zoom = d3.zoom()
+        .scaleExtent([1, 4])
+        .translateExtent([[-500, -300], [1300, 1000]])
+        .on("zoom", () => {
+            chart.attr("transform", d3.event.transform);
+        });
+
+    d3.select("#chart3").call(zoom);
+
+    chart.append("rect")
+        .attr("width", 1000)
+        .attr("height", 1000)
+        .attr("fill", "#CCC");
 
     const dataPromise = d3.csv('Motorvoertuigen__type__postcode__regio_s_20072018_140032.csv', (obj, idx) => {
         return {
@@ -60,19 +74,9 @@ const makeGeoPlot = () => {
     let labels = chart.selectAll("g");
     let currentYear = null;
     let active = d3.select(null);
-
-    const zoomed = () => {
-        chart.style("stroke-width", 1.5 / d3.event.transform.k + "px");
-        chart.attr("transform", d3.event.transform);
-    };
-
-    const zoom = d3.zoom()
-        .scaleExtent([1, 8])
-        .on("zoom", zoomed);
     
     function reset() {
         active.classed("active", false);
-        active.moveToBack();
         active = d3.select(null);
     
         chart.transition()
@@ -91,7 +95,7 @@ const makeGeoPlot = () => {
             dy = bounds[1][1] - bounds[0][1],
             x = (bounds[0][0] + bounds[1][0]) / 2,
             y = (bounds[0][1] + bounds[1][1]) / 2,
-            scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / width, dy / height))),
+            scale = Math.max(1, Math.min(4, 0.9 / Math.max(dx / width, dy / height))),
             translate = [width / 2 - scale * x, height / 2 - scale * y];
         
         chart.transition()
@@ -120,7 +124,9 @@ const makeGeoPlot = () => {
                     .attr("d", path)
                     .on("click", clicked)
                     .on("mouseover", d => {
-                        d3.select("#p" + d.properties.PC4CODE).style("display", "block");
+                        if (active.empty()) {
+                            d3.select("#p" + d.properties.PC4CODE).style("display", "block");
+                        }
                     })
                     .on("mouseout", d => {
                         d3.select("#p" + d.properties.PC4CODE).style("display", "none");
@@ -141,7 +147,9 @@ const makeGeoPlot = () => {
                     .attr("class", "postcode-label")
                     .attr("transform", d => `translate(${path.centroid(d)[0]}, ${path.centroid(d)[1] - 5})`)
                     .on("mouseover", function(d) {
-                        d3.select(this).style("display", "block");
+                        if (active.empty()) {
+                            d3.select(this).style("display", "block");
+                        }
                     })
                     .on("mouseout", function(d) {
                         d3.select(this).style("display", "none");
@@ -154,8 +162,6 @@ const makeGeoPlot = () => {
                     const count = filteredData.get(d.properties.PC4CODE);
                     return `${d.properties.PC4CODE}: ${count}`;
                 });
-
-            chart.call(zoom);
         });
 
     // slider
