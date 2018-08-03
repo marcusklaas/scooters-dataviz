@@ -112,9 +112,15 @@ const makeGeoPlot = () => {
         const slider = d3.select("#chart3").append("g")
             .attr("transform", `translate(${margin.left}, ${height + margin.top + 20})`);
 
-        function hue(h) {
-            handle.attr("cx", xScale(h));
-        }
+        const updateSlider = inverted => {
+            const year = Math.round(inverted / dx);
+            handle.attr("cx", xScale(inverted));
+
+            if (year !== currentYear) {
+                currentYear = year;
+                drawMap(years[currentYear]);
+            }
+        };
 
         slider.append("line")
             .attr("class", "track")
@@ -126,14 +132,11 @@ const makeGeoPlot = () => {
             .attr("class", "track-overlay")
             .call(d3.drag()
                 .on("start.interrupt", () => slider.interrupt())
-                .on("start drag", () => {
-                    hue(xScale.invert(d3.event.x));
+                .on("start drag", () => updateSlider(xScale.invert(d3.event.x)))
+                .on("end", () => {
                     const year = Math.round(xScale.invert(d3.event.x) / dx);
-
-                    if (year !== currentYear) {
-                        currentYear = year;
-                        drawMap(years[currentYear]);
-                    }
+                    const inverted = year * dx;
+                    updateSlider(inverted);
                 }))
 
         slider.insert("g", ".track-overlay")
