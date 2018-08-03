@@ -1,3 +1,18 @@
+d3.selection.prototype.moveToFront = function() {  
+    return this.each(function(){
+        this.parentNode.appendChild(this);
+    });
+};
+
+d3.selection.prototype.moveToBack = function() {  
+    return this.each(function() { 
+        var firstChild = this.parentNode.firstChild; 
+        if (firstChild) { 
+            this.parentNode.insertBefore(this, firstChild); 
+        } 
+    });
+};
+
 const makeGeoPlot = () => {
     const margin = {top: 20, right: 120, bottom: 60, left: 60},
         width = 960 - margin.left - margin.right,
@@ -44,21 +59,32 @@ const makeGeoPlot = () => {
     let paths = chart.selectAll("path");
     let labels = chart.selectAll("g");
     let currentYear = null;
+    let active = d3.select(null);
 
     const zoomed = () => {
         chart.style("stroke-width", 1.5 / d3.event.transform.k + "px");
-        // g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")"); // not in d3 v4
-        chart.attr("transform", d3.event.transform); // updated for d3 v4
+        chart.attr("transform", d3.event.transform);
     };
-    
+
     const zoom = d3.zoom()
         .scaleExtent([1, 8])
         .on("zoom", zoomed);
+    
+    function reset() {
+        active.classed("active", false);
+        active.moveToBack();
+        active = d3.select(null);
+    
+        chart.transition()
+            .duration(750)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
 
-    const clicked = d => {
-        // if (active.node() === this) return reset();
-        // active.classed("active", false);
-        // active = d3.select(this).classed("active", true);
+    function clicked(d) {
+        if (active.node() === this) return reset();
+        active.classed("active", false);
+        active = d3.select(this).classed("active", true);
+        d3.select(this).moveToFront();
         
         const bounds = path.bounds(d),
             dx = bounds[1][0] - bounds[0][0],
@@ -76,7 +102,7 @@ const makeGeoPlot = () => {
                     .translate(translate[0],translate[1])
                     .scale(scale)
             );
-    };
+    }
 
     // FIXME: we should split this into a draw one function and an update function
     const drawMap = year =>
@@ -130,10 +156,6 @@ const makeGeoPlot = () => {
                 });
 
             chart.call(zoom);
-
-            // chart.transition()
-            //     .duration(1750)
-            //     .call(zoom.transform, d3.zoomIdentity.scale(2));
         });
 
     // slider
