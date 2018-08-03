@@ -37,12 +37,12 @@ const makeGeoPlot = () => {
     const polygonPromise = d3.json('polygon.json').then(data => 
         data.features.filter(d => parseInt(d.properties.PC4CODE) < postcodeUpperLimit));
 
-    
     const colorScale = d3.scaleLinear().domain([legendLower, legendUpper])
         .interpolate(d3.interpolateHcl)
         .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')]);
 
     let paths = chart.selectAll("path");
+    let labels = chart.selectAll("g");
     let currentYear = null;
 
     // TODO: add zoom on click
@@ -70,14 +70,13 @@ const makeGeoPlot = () => {
                     .merge(paths)
 
             paths.transition()
-                .duration(100)
-                .attr("fill", d => colorScale(filteredData.get(d.properties.PC4CODE)))
-
-            // TODO: update labels
+                .duration(500)
+                .attr("fill", d => colorScale(filteredData.get(d.properties.PC4CODE)));
 
             // labels
-            chart.selectAll("g")
-                .data(polygons)
+            labels = labels.data(polygons);
+            labels.exit().remove();
+            labels = labels
                 .enter()
                     .append("g")
                     .attr("id", d => `p${d.properties.PC4CODE}`)
@@ -90,11 +89,13 @@ const makeGeoPlot = () => {
                         d3.select(this).style("display", "none");
                     })
                     .append("text")
-                    .style("text-anchor", "middle")
-                    .text(d => {
-                        const count = filteredData.get(d.properties.PC4CODE);
-                        return `${d.properties.PC4CODE}: ${count}`;
-                    });
+                        .merge(labels);
+
+            labels.style("text-anchor", "middle")
+                .text(d => {
+                    const count = filteredData.get(d.properties.PC4CODE);
+                    return `${d.properties.PC4CODE}: ${count}`;
+                });
         });
 
     // slider
