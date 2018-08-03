@@ -45,7 +45,38 @@ const makeGeoPlot = () => {
     let labels = chart.selectAll("g");
     let currentYear = null;
 
-    // TODO: add zoom on click
+    const zoomed = () => {
+        chart.style("stroke-width", 1.5 / d3.event.transform.k + "px");
+        // g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")"); // not in d3 v4
+        chart.attr("transform", d3.event.transform); // updated for d3 v4
+    };
+    
+    const zoom = d3.zoom()
+        .scaleExtent([1, 8])
+        .on("zoom", zoomed);
+
+    const clicked = d => {
+        // if (active.node() === this) return reset();
+        // active.classed("active", false);
+        // active = d3.select(this).classed("active", true);
+        
+        const bounds = path.bounds(d),
+            dx = bounds[1][0] - bounds[0][0],
+            dy = bounds[1][1] - bounds[0][1],
+            x = (bounds[0][0] + bounds[1][0]) / 2,
+            y = (bounds[0][1] + bounds[1][1]) / 2,
+            scale = Math.max(1, Math.min(8, 0.9 / Math.max(dx / width, dy / height))),
+            translate = [width / 2 - scale * x, height / 2 - scale * y];
+        
+        chart.transition()
+            .duration(750)
+            .call(
+                zoom.transform,
+                d3.zoomIdentity
+                    .translate(translate[0],translate[1])
+                    .scale(scale)
+            );
+    };
 
     // FIXME: we should split this into a draw one function and an update function
     const drawMap = year =>
@@ -61,6 +92,7 @@ const makeGeoPlot = () => {
                 .enter()
                     .append("path")
                     .attr("d", path)
+                    .on("click", clicked)
                     .on("mouseover", d => {
                         d3.select("#p" + d.properties.PC4CODE).style("display", "block");
                     })
@@ -89,13 +121,19 @@ const makeGeoPlot = () => {
                         d3.select(this).style("display", "none");
                     })
                     .append("text")
-                        .merge(labels);
+                    .merge(labels);
 
             labels.style("text-anchor", "middle")
                 .text(d => {
                     const count = filteredData.get(d.properties.PC4CODE);
                     return `${d.properties.PC4CODE}: ${count}`;
                 });
+
+            chart.call(zoom);
+
+            // chart.transition()
+            //     .duration(1750)
+            //     .call(zoom.transform, d3.zoomIdentity.scale(2));
         });
 
     // slider
