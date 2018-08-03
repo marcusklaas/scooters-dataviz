@@ -89,7 +89,24 @@
 
         .active {
             z-index: 10;
-            filter: drop-shadow( 0px 0px 5px #000 );
+            filter: drop-shadow( 0px 0px 3px #000 );
+            stroke: #000;
+            stroke-width: 2px;
+        }
+
+        .active ~ path {
+            filter: brightness(0.5);
+        }
+
+        path {
+            stroke: rgba(0, 0, 0, 0.3);
+            stroke-width: .5px;
+        }
+
+        path:hover {
+            filter: brightness(0.7);
+            stroke: #000;
+            stroke-width: 2px;
         }
     </style>
     <script src="https://d3js.org/d3.v5.min.js"></script>
@@ -106,13 +123,13 @@
     </script>
 </head>
 <body>
+    <h2>Scooterbezit per postcode</h2>
+    <svg id="chart3" class="chart"></svg>
     <h2>Aantallen scooters in Nederland</h2>
     <svg id="chart1" class="chart"></svg>
     <h2>Ontwikkeling emissies naar lucht</h2>
     <svg id="chart2" class="chart"></svg>
     <h2>Aantal ongevallen door tijd</h2>
-    <h2>Scooterbezit per postcode</h2>
-    <svg id="chart3" class="chart"></svg>
     <h2>Ingenomen ruimte</h2>
     <h2>Gezondheid</h2>
     <h2>Demografie bromfietsbezitters</h2>

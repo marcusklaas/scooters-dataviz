@@ -28,8 +28,9 @@ const makeGeoPlot = () => {
         .translate([-0.08 * scale, 1.081 * scale]);
 
     const path = d3.geoPath().projection(projection);
+    const svg = d3.select("#chart3");
 
-    let chart = d3.select("#chart3")
+    let chart = svg
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
@@ -42,7 +43,7 @@ const makeGeoPlot = () => {
             chart.attr("transform", d3.event.transform);
         });
 
-    d3.select("#chart3").call(zoom);
+    svg.call(zoom);
 
     chart.append("rect")
         .attr("width", 1000)
@@ -79,7 +80,7 @@ const makeGeoPlot = () => {
         active.classed("active", false);
         active = d3.select(null);
     
-        chart.transition()
+        svg.transition()
             .duration(750)
             .call(zoom.transform, d3.zoomIdentity);
     }
@@ -98,7 +99,7 @@ const makeGeoPlot = () => {
             scale = Math.max(1, Math.min(4, 0.9 / Math.max(dx / width, dy / height))),
             translate = [width / 2 - scale * x, height / 2 - scale * y];
         
-        chart.transition()
+        svg.transition()
             .duration(750)
             .call(
                 zoom.transform,
@@ -123,14 +124,14 @@ const makeGeoPlot = () => {
                     .append("path")
                     .attr("d", path)
                     .on("click", clicked)
-                    .on("mouseover", d => {
-                        if (active.empty()) {
-                            d3.select("#p" + d.properties.PC4CODE).style("display", "block");
-                        }
-                    })
-                    .on("mouseout", d => {
-                        d3.select("#p" + d.properties.PC4CODE).style("display", "none");
-                    })
+                    // .on("mouseover", d => {
+                    //     if (active.empty()) {
+                    //         d3.select("#p" + d.properties.PC4CODE).style("display", "block");
+                    //     }
+                    // })
+                    // .on("mouseout", d => {
+                    //     d3.select("#p" + d.properties.PC4CODE).style("display", "none");
+                    // })
                     .merge(paths)
 
             paths.transition()
@@ -146,14 +147,14 @@ const makeGeoPlot = () => {
                     .attr("id", d => `p${d.properties.PC4CODE}`)
                     .attr("class", "postcode-label")
                     .attr("transform", d => `translate(${path.centroid(d)[0]}, ${path.centroid(d)[1] - 5})`)
-                    .on("mouseover", function(d) {
-                        if (active.empty()) {
-                            d3.select(this).style("display", "block");
-                        }
-                    })
-                    .on("mouseout", function(d) {
-                        d3.select(this).style("display", "none");
-                    })
+                    // .on("mouseover", function(d) {
+                    //     if (active.empty()) {
+                    //         d3.select(this).style("display", "block");
+                    //     }
+                    // })
+                    // .on("mouseout", function(d) {
+                    //     d3.select(this).style("display", "none");
+                    // })
                     .append("text")
                     .merge(labels);
 
@@ -176,7 +177,7 @@ const makeGeoPlot = () => {
             .range([0, width])
             .clamp(true);
 
-        const slider = d3.select("#chart3").append("g")
+        const slider = svg.append("g")
             .attr("transform", `translate(${margin.left}, ${height + margin.top + 20})`);
 
         const updateSlider = inverted => {
@@ -224,8 +225,7 @@ const makeGeoPlot = () => {
         // legend
         const legendWidth = 20;
         const legendHeight = height * .4;
-        const key = d3.select("#chart3")
-            .append("g")
+        const key = svg.append("g")
             .attr("width", legendWidth)
             .attr("height", legendHeight)
             .attr("transform", `translate(${margin.left + width + 18}, ${margin.top})`);
